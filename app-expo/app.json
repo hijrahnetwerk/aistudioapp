@@ -1,0 +1,23 @@
+{
+  "expo": {
+    "name": "Hijrah Netwerk",
+    "slug": "hijrah-netwerk",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "org.hijrahnetwerk.app"
+    },
+    "android": {
+      "package": "org.hijrahnetwerk.app",
+      "adaptiveIcon": {
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
