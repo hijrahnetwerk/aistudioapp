@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Hijrah Netwerk</string>
+    <string name="app_slogan">Een netwerk voor emigranten, van oriëntatie tot integratie.</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_discover">Ontdekken</string>
+    <string name="nav_navigation">Navigatie</string>
+    <string name="nav_community">Community</string>
+    <string name="nav_profile">Profiel</string>
+    <string name="auth_cta_google">Doorgaan met Google</string>
+    <string name="auth_privacy_note">Veilige en besloten omgeving voor zusters en gezinnen. Persoonlijke gegevens blijven privé.</string>
+    <string name="cd_search">Zoeken in Hijrah Netwerk</string>
+    <string name="cd_notifications">Meldingen bekijken</string>
+    <string name="cd_bookmark">Opslaan als favoriet</string>
+</resources>

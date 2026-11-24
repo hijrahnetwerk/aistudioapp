@@ -1,0 +1,256 @@
+{
+  "entities": {
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Persoonlijk oriëntatie- en trajectprofiel van een geauthenticeerde gebruiker zonder PII.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "displayAlias": { "type": "string" },
+        "originCountry": { "type": "string" },
+        "currentCity": { "type": "string" },
+        "hijrahPhase": { "type": "string", "enum": ["ORIENTATIE", "ONDERZOEK", "VOORBEREIDING", "INTEGRATIE"] },
+        "focusCountry": { "type": "string" },
+        "focusCity": { "type": "string" },
+        "onboardingCompleted": { "type": "boolean" },
+        "lastVisitedTitle": { "type": "string" },
+        "lastVisitedRoute": { "type": "string" },
+        "completedStepsCount": { "type": "integer" },
+        "totalStepsCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "displayAlias", "originCountry", "currentCity", "hijrahPhase", "focusCountry", "focusCity",
+        "onboardingCompleted", "lastVisitedTitle", "lastVisitedRoute",
+        "completedStepsCount", "totalStepsCount", "createdAt", "updatedAt"
+      ]
+    },
+    "ChecklistItem": {
+      "title": "ChecklistItem",
+      "description": "Persoonlijke stap in HijrahTools planner en checklist.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "phase": { "type": "string", "enum": ["ORIENTATIE", "ONDERZOEK", "VOORBEREIDING", "INTEGRATIE"] },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "completed": { "type": "boolean" },
+        "sortOrder": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "phase", "title", "category", "completed", "sortOrder", "createdAt", "updatedAt"]
+    },
+    "BudgetItem": {
+      "title": "BudgetItem",
+      "description": "Persoonlijke begrotingspost in de HijrahTools budgetplanner.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "amountEur": { "type": "integer" },
+        "recurringMonthly": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "category", "amountEur", "recurringMonthly", "createdAt", "updatedAt"]
+    },
+    "DocumentItem": {
+      "title": "DocumentItem",
+      "description": "Persoonlijk document en legalisatiestatus in HijrahTools.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "category": { "type": "string" },
+        "docStatus": { "type": "string", "enum": ["NOG_REGELEN", "IN_AANVRAAG", "GEREED"] },
+        "note": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "category", "docStatus", "note", "createdAt", "updatedAt"]
+    },
+    "SavedFavorite": {
+      "title": "SavedFavorite",
+      "description": "Opgeslagen land, stad, locatie, gids of ervaring.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["COUNTRY", "CITY", "LOCATION", "GUIDE", "EXPERIENCE"] },
+        "targetId": { "type": "string" },
+        "title": { "type": "string" },
+        "subtitle": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "targetType", "targetId", "title", "subtitle", "createdAt"]
+    },
+    "PersonalNote": {
+      "title": "PersonalNote",
+      "description": "Persoonlijke notitie in HijrahTools.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "topic": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "title", "body", "topic", "createdAt", "updatedAt"]
+    },
+    "ExperienceSubmission": {
+      "title": "ExperienceSubmission",
+      "description": "Ingezonden emigratie-ervaring die na moderatie gepubliceerd wordt.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "authorAlias": { "type": "string" },
+        "countryName": { "type": "string" },
+        "cityName": { "type": "string" },
+        "topic": { "type": "string" },
+        "title": { "type": "string" },
+        "story": { "type": "string" },
+        "prosAndCons": { "type": "string" },
+        "lessonLearned": { "type": "string" },
+        "practicalTip": { "type": "string" },
+        "status": { "type": "string", "enum": ["PENDING", "APPROVED", "REJECTED"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" },
+        "verifiedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "authorAlias", "countryName", "cityName", "topic", "title",
+        "story", "prosAndCons", "lessonLearned", "practicalTip", "status", "createdAt", "updatedAt"
+      ]
+    },
+    "CommunityPost": {
+      "title": "CommunityPost",
+      "description": "Vraag of bericht in een veilige zustercommunity-groep.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "authorAlias": { "type": "string" },
+        "groupTitle": { "type": "string" },
+        "title": { "type": "string" },
+        "body": { "type": "string" },
+        "status": { "type": "string", "enum": ["PUBLISHED", "HIDDEN"] },
+        "replyCount": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "authorAlias", "groupTitle", "title", "body", "status", "replyCount", "createdAt", "updatedAt"]
+    },
+    "CommunityReply": {
+      "title": "CommunityReply",
+      "description": "Reactie onder een communitybericht.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "authorAlias": { "type": "string" },
+        "body": { "type": "string" },
+        "status": { "type": "string", "enum": ["PUBLISHED", "HIDDEN"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "authorAlias", "body", "status", "createdAt"]
+    },
+    "ModerationReport": {
+      "title": "ModerationReport",
+      "description": "Veiligheids- of moderatiemelding van een communitylid.",
+      "type": "object",
+      "properties": {
+        "reporterId": { "type": "string" },
+        "targetType": { "type": "string", "enum": ["EXPERIENCE", "COMMUNITY_POST", "REPLY"] },
+        "targetId": { "type": "string" },
+        "reason": { "type": "string" },
+        "status": { "type": "string", "enum": ["OPEN", "REVIEWED"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["reporterId", "targetType", "targetId", "reason", "status", "createdAt"]
+    },
+    "GameScore": {
+      "title": "GameScore",
+      "description": "Opgeslagen spelvoortgang en hoogste score per spel voor een gebruiker.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "gameId": { "type": "string" },
+        "bestScore": { "type": "integer" },
+        "gamesPlayed": { "type": "integer" },
+        "gamesWon": { "type": "integer" },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "gameId", "bestScore", "gamesPlayed", "gamesWon", "createdAt", "updatedAt"]
+    },
+    "NotificationPreferences": {
+      "title": "NotificationPreferences",
+      "description": "FCM-apparaattoken en meldingsvoorkeuren voor forumreacties en mijlpaal-herinneringen.",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "fcmToken": { "type": "string" },
+        "forumRepliesEnabled": { "type": "boolean" },
+        "milestoneRemindersEnabled": { "type": "boolean" },
+        "reminderCadence": { "type": "string", "enum": ["DAILY", "WEEKLY", "OFF"] },
+        "createdAt": { "type": "string", "format": "date-time" },
+        "updatedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": [
+        "userId", "fcmToken", "forumRepliesEnabled", "milestoneRemindersEnabled",
+        "reminderCadence", "createdAt", "updatedAt"
+      ]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "Privé-trajectprofiel van de gebruiker."
+    },
+    "/users/{userId}/checklist_items/{stepId}": {
+      "schema": { "$ref": "#/entities/ChecklistItem" },
+      "description": "Persoonlijke voorbereidings- en integratiestappen."
+    },
+    "/users/{userId}/budget_items/{itemId}": {
+      "schema": { "$ref": "#/entities/BudgetItem" },
+      "description": "Persoonlijke begrotingsposten in HijrahTools."
+    },
+    "/users/{userId}/documents/{docId}": {
+      "schema": { "$ref": "#/entities/DocumentItem" },
+      "description": "Persoonlijk documentenoverzicht in HijrahTools."
+    },
+    "/users/{userId}/favorites/{favoriteId}": {
+      "schema": { "$ref": "#/entities/SavedFavorite" },
+      "description": "Opgeslagen favorieten van de gebruiker."
+    },
+    "/users/{userId}/notes/{noteId}": {
+      "schema": { "$ref": "#/entities/PersonalNote" },
+      "description": "Persoonlijke notities in HijrahTools."
+    },
+    "/users/{userId}/game_scores/{gameId}": {
+      "schema": { "$ref": "#/entities/GameScore" },
+      "description": "Persoonlijke spelscores en voortgang voor Hijrah Spellen."
+    },
+    "/users/{userId}/notification_settings/{settingId}": {
+      "schema": { "$ref": "#/entities/NotificationPreferences" },
+      "description": "Persoonlijke FCM pushmeldingsvoorkeuren en apparaattoken."
+    },
+    "/experiences/{experienceId}": {
+      "schema": { "$ref": "#/entities/ExperienceSubmission" },
+      "description": "Ervaringen die door beheer gecontroleerd en goedgekeurd worden."
+    },
+    "/community_posts/{postId}": {
+      "schema": { "$ref": "#/entities/CommunityPost" },
+      "description": "Vragen en updates in de zustercommunity."
+    },
+    "/community_posts/{postId}/replies/{replyId}": {
+      "schema": { "$ref": "#/entities/CommunityReply" },
+      "description": "Reacties op communityberichten."
+    },
+    "/reports/{reportId}": {
+      "schema": { "$ref": "#/entities/ModerationReport" },
+      "description": "Moderatiemeldingen voor beheer."
+    }
+  }
+}

@@ -1,0 +1,551 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Global safety net: deny by default
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // --- GLOBAL HARDENED HELPERS ---
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() >= 1 && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid)) ||
+        (request.auth.token.email == 'hijrahnetwerk@gmail.com' && request.auth.token.email_verified == true)
+      );
+    }
+
+    function isValidPhase(phase) {
+      return phase in ['ORIENTATIE', 'ONDERZOEK', 'VOORBEREIDING', 'INTEGRATIE'];
+    }
+
+    // --- VALIDATION HELPERS ---
+    function isValidUserProfile(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.displayAlias is string && data.displayAlias.size() >= 2 && data.displayAlias.size() <= 40 &&
+             (!('originCountry' in data) || (data.originCountry is string && data.originCountry.size() <= 60)) &&
+             (!('currentCity' in data) || (data.currentCity is string && data.currentCity.size() <= 60)) &&
+             isValidPhase(data.hijrahPhase) &&
+             data.focusCountry is string && data.focusCountry.size() <= 60 &&
+             data.focusCity is string && data.focusCity.size() <= 60 &&
+             data.onboardingCompleted is bool &&
+             data.lastVisitedTitle is string && data.lastVisitedTitle.size() <= 100 &&
+             data.lastVisitedRoute is string && data.lastVisitedRoute.size() <= 60 &&
+             data.completedStepsCount is int && data.completedStepsCount >= 0 && data.completedStepsCount <= 500 &&
+             data.totalStepsCount is int && data.totalStepsCount >= 0 && data.totalStepsCount <= 500 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidChecklistItem(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             isValidPhase(data.phase) &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+             data.category is string && data.category.size() >= 2 && data.category.size() <= 50 &&
+             data.completed is bool &&
+             data.sortOrder is int && data.sortOrder >= 0 && data.sortOrder <= 1000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidBudgetItem(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 100 &&
+             data.category is string && data.category.size() >= 2 && data.category.size() <= 50 &&
+             data.amountEur is int && data.amountEur >= 0 && data.amountEur <= 10000000 &&
+             data.recurringMonthly is bool &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidDocumentItem(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+             data.category is string && data.category.size() >= 2 && data.category.size() <= 50 &&
+             data.docStatus in ['NOG_REGELEN', 'IN_AANVRAAG', 'GEREED'] &&
+             data.note is string && data.note.size() <= 300 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidSavedFavorite(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.targetType in ['COUNTRY', 'CITY', 'LOCATION', 'GUIDE', 'EXPERIENCE'] &&
+             data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 80 &&
+             data.title is string && data.title.size() >= 2 && data.title.size() <= 120 &&
+             data.subtitle is string && data.subtitle.size() <= 160 &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidPersonalNote(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.title is string && data.title.size() >= 1 && data.title.size() <= 120 &&
+             data.body is string && data.body.size() <= 2000 &&
+             data.topic is string && data.topic.size() <= 60 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidGameScore(data, userId, gameId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.gameId is string &&
+             data.gameId == gameId &&
+             data.gameId in ['BOARD_HIJRAH', 'QUIZ_HIJRAH', 'CARDS_MEMORY', 'CARDS_DUEL', 'WORDS_HIJRAH'] &&
+             data.bestScore is int && data.bestScore >= 0 && data.bestScore <= 1000000 &&
+             data.gamesPlayed is int && data.gamesPlayed >= 0 && data.gamesPlayed <= 1000000 &&
+             data.gamesWon is int && data.gamesWon >= 0 && data.gamesWon <= data.gamesPlayed &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidNotificationPreferences(data, userId) {
+      return data.userId is string &&
+             data.userId == userId &&
+             data.fcmToken is string && data.fcmToken.size() <= 512 &&
+             data.forumRepliesEnabled is bool &&
+             data.milestoneRemindersEnabled is bool &&
+             data.reminderCadence in ['DAILY', 'WEEKLY', 'OFF'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidExperienceSubmission(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.authorAlias is string && data.authorAlias.size() >= 2 && data.authorAlias.size() <= 40 &&
+             data.countryName is string && data.countryName.size() >= 2 && data.countryName.size() <= 60 &&
+             data.cityName is string && data.cityName.size() <= 60 &&
+             data.topic is string && data.topic.size() >= 2 && data.topic.size() <= 60 &&
+             data.title is string && data.title.size() >= 4 && data.title.size() <= 120 &&
+             data.story is string && data.story.size() >= 10 && data.story.size() <= 4000 &&
+             data.prosAndCons is string && data.prosAndCons.size() <= 1000 &&
+             data.lessonLearned is string && data.lessonLearned.size() <= 1000 &&
+             data.practicalTip is string && data.practicalTip.size() <= 600 &&
+             data.status in ['PENDING', 'APPROVED', 'REJECTED'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time &&
+             (!('verifiedAt' in data) || data.verifiedAt == null || (data.verifiedAt is timestamp && data.verifiedAt <= request.time));
+    }
+
+    function isValidCommunityPost(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.authorAlias is string && data.authorAlias.size() >= 2 && data.authorAlias.size() <= 40 &&
+             data.groupTitle is string && data.groupTitle.size() >= 2 && data.groupTitle.size() <= 80 &&
+             data.title is string && data.title.size() >= 3 && data.title.size() <= 120 &&
+             data.body is string && data.body.size() >= 5 && data.body.size() <= 2000 &&
+             data.status in ['PUBLISHED', 'HIDDEN'] &&
+             data.replyCount is int && data.replyCount >= 0 && data.replyCount <= 10000 &&
+             data.createdAt is timestamp && data.createdAt <= request.time &&
+             data.updatedAt is timestamp && data.updatedAt <= request.time;
+    }
+
+    function isValidCommunityReply(data) {
+      return data.userId is string && data.userId.size() >= 1 && data.userId.size() <= 128 &&
+             data.authorAlias is string && data.authorAlias.size() >= 2 && data.authorAlias.size() <= 40 &&
+             data.body is string && data.body.size() >= 2 && data.body.size() <= 1200 &&
+             data.status in ['PUBLISHED', 'HIDDEN'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    function isValidModerationReport(data) {
+      return data.reporterId is string && data.reporterId.size() >= 1 && data.reporterId.size() <= 128 &&
+             data.targetType in ['EXPERIENCE', 'COMMUNITY_POST', 'REPLY'] &&
+             data.targetId is string && data.targetId.size() >= 1 && data.targetId.size() <= 128 &&
+             data.reason is string && data.reason.size() >= 4 && data.reason.size() <= 400 &&
+             data.status in ['OPEN', 'REVIEWED'] &&
+             data.createdAt is timestamp && data.createdAt <= request.time;
+    }
+
+    // --- ADMINS ---
+    match /admins/{adminId} {
+      allow get: if isSignedIn() && request.auth.uid == adminId;
+      allow list, write: if false;
+    }
+
+    // --- USER PROFILE & PRIVATE SUBCOLLECTIONS ---
+    match /users/{userId} {
+      allow get: if isValidId(userId) && isOwner(userId);
+      allow list: if false;
+
+      allow create: if isValidId(userId) &&
+                       isOwner(userId) &&
+                       incoming().keys().hasAll([
+                         'userId', 'displayAlias', 'originCountry', 'currentCity', 'hijrahPhase', 'focusCountry', 'focusCity',
+                         'onboardingCompleted', 'lastVisitedTitle', 'lastVisitedRoute',
+                         'completedStepsCount', 'totalStepsCount', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'displayAlias', 'originCountry', 'currentCity', 'hijrahPhase', 'focusCountry', 'focusCity',
+                         'onboardingCompleted', 'lastVisitedTitle', 'lastVisitedRoute',
+                         'completedStepsCount', 'totalStepsCount', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidUserProfile(incoming(), userId);
+
+      allow update: if isValidId(userId) &&
+                       isOwner(userId) &&
+                       isValidUserProfile(incoming(), userId) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly([
+                         'displayAlias', 'originCountry', 'currentCity', 'hijrahPhase', 'focusCountry', 'focusCity',
+                         'onboardingCompleted', 'lastVisitedTitle', 'lastVisitedRoute',
+                         'completedStepsCount', 'totalStepsCount', 'updatedAt'
+                       ]);
+
+      allow delete: if isValidId(userId) && isOwner(userId);
+
+      match /checklist_items/{stepId} {
+        allow get: if isValidId(stepId) && isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isValidId(stepId) &&
+                         isOwner(userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'phase', 'title', 'category', 'completed', 'sortOrder', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'phase', 'title', 'category', 'completed', 'sortOrder', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidChecklistItem(incoming(), userId);
+
+        allow update: if isValidId(stepId) &&
+                         isOwner(userId) &&
+                         isValidChecklistItem(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'phase', 'title', 'category', 'completed', 'sortOrder', 'updatedAt'
+                         ]);
+
+        allow delete: if isValidId(stepId) && isOwner(userId);
+      }
+
+      match /budget_items/{itemId} {
+        allow get: if isValidId(itemId) && isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isValidId(itemId) &&
+                         isOwner(userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'category', 'amountEur', 'recurringMonthly', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'category', 'amountEur', 'recurringMonthly', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidBudgetItem(incoming(), userId);
+
+        allow update: if isValidId(itemId) &&
+                         isOwner(userId) &&
+                         isValidBudgetItem(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'category', 'amountEur', 'recurringMonthly', 'updatedAt'
+                         ]);
+
+        allow delete: if isValidId(itemId) && isOwner(userId);
+      }
+
+      match /documents/{docId} {
+        allow get: if isValidId(docId) && isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isValidId(docId) &&
+                         isOwner(userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'title', 'category', 'docStatus', 'note', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'title', 'category', 'docStatus', 'note', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidDocumentItem(incoming(), userId);
+
+        allow update: if isValidId(docId) &&
+                         isOwner(userId) &&
+                         isValidDocumentItem(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'title', 'category', 'docStatus', 'note', 'updatedAt'
+                         ]);
+
+        allow delete: if isValidId(docId) && isOwner(userId);
+      }
+
+      match /favorites/{favoriteId} {
+        allow get: if isValidId(favoriteId) && isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isValidId(favoriteId) &&
+                         isOwner(userId) &&
+                         incoming().keys().hasAll(['userId', 'targetType', 'targetId', 'title', 'subtitle', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'targetType', 'targetId', 'title', 'subtitle', 'createdAt']) &&
+                         isValidSavedFavorite(incoming(), userId);
+
+        allow update: if false;
+        allow delete: if isValidId(favoriteId) && isOwner(userId);
+      }
+
+      match /notes/{noteId} {
+        allow get: if isValidId(noteId) && isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isValidId(noteId) &&
+                         isOwner(userId) &&
+                         incoming().keys().hasAll(['userId', 'title', 'body', 'topic', 'createdAt', 'updatedAt']) &&
+                         incoming().keys().hasOnly(['userId', 'title', 'body', 'topic', 'createdAt', 'updatedAt']) &&
+                         isValidPersonalNote(incoming(), userId);
+
+        allow update: if isValidId(noteId) &&
+                         isOwner(userId) &&
+                         isValidPersonalNote(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly(['title', 'body', 'topic', 'updatedAt']);
+
+        allow delete: if isValidId(noteId) && isOwner(userId);
+      }
+
+      match /game_scores/{gameId} {
+        allow get: if isValidId(gameId) && isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isValidId(gameId) &&
+                         isOwner(userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'gameId', 'bestScore', 'gamesPlayed', 'gamesWon', 'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'gameId', 'bestScore', 'gamesPlayed', 'gamesWon', 'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidGameScore(incoming(), userId, gameId);
+
+        allow update: if isValidId(gameId) &&
+                         isOwner(userId) &&
+                         isValidGameScore(incoming(), userId, gameId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().gameId == existing().gameId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'bestScore', 'gamesPlayed', 'gamesWon', 'updatedAt'
+                         ]);
+
+        allow delete: if isValidId(gameId) && isOwner(userId);
+      }
+
+      match /notification_settings/{settingId} {
+        allow get: if isValidId(settingId) && isOwner(userId);
+        allow list: if isOwner(userId);
+
+        allow create: if isValidId(settingId) &&
+                         isOwner(userId) &&
+                         incoming().keys().hasAll([
+                           'userId', 'fcmToken', 'forumRepliesEnabled',
+                           'milestoneRemindersEnabled', 'reminderCadence',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         incoming().keys().hasOnly([
+                           'userId', 'fcmToken', 'forumRepliesEnabled',
+                           'milestoneRemindersEnabled', 'reminderCadence',
+                           'createdAt', 'updatedAt'
+                         ]) &&
+                         isValidNotificationPreferences(incoming(), userId);
+
+        allow update: if isValidId(settingId) &&
+                         isOwner(userId) &&
+                         isValidNotificationPreferences(incoming(), userId) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt &&
+                         incoming().diff(existing()).affectedKeys().hasOnly([
+                           'fcmToken', 'forumRepliesEnabled',
+                           'milestoneRemindersEnabled', 'reminderCadence', 'updatedAt'
+                         ]);
+
+        allow delete: if isValidId(settingId) && isOwner(userId);
+      }
+    }
+
+    // --- EXPERIENCES (MODERATION WORKFLOW) ---
+    match /experiences/{experienceId} {
+      allow get: if isValidId(experienceId) && isSignedIn() && (
+        existing().status == 'APPROVED' ||
+        existing().userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.status == 'APPROVED' ||
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow create: if isValidId(experienceId) &&
+                       isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PENDING' &&
+                       incoming().keys().hasAll([
+                         'userId', 'authorAlias', 'countryName', 'cityName', 'topic',
+                         'title', 'story', 'prosAndCons', 'lessonLearned', 'practicalTip',
+                         'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'authorAlias', 'countryName', 'cityName', 'topic',
+                         'title', 'story', 'prosAndCons', 'lessonLearned', 'practicalTip',
+                         'status', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidExperienceSubmission(incoming());
+
+      allow update: if isValidId(experienceId) && isSignedIn() && isValidExperienceSubmission(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt && (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           existing().status == 'PENDING' &&
+                           incoming().status == 'PENDING' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'authorAlias', 'countryName', 'cityName', 'topic', 'title',
+                             'story', 'prosAndCons', 'lessonLearned', 'practicalTip', 'updatedAt'
+                           ])
+                         )
+                       );
+
+      allow delete: if isValidId(experienceId) && isSignedIn() && (
+        (existing().userId == request.auth.uid && existing().status == 'PENDING') ||
+        isAdmin()
+      );
+    }
+
+    // --- COMMUNITY POSTS & REPLIES ---
+    match /community_posts/{postId} {
+      allow get: if isValidId(postId) && isSignedIn() && (
+        existing().status == 'PUBLISHED' ||
+        existing().userId == request.auth.uid ||
+        isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.status == 'PUBLISHED' ||
+        resource.data.userId == request.auth.uid ||
+        isAdmin()
+      );
+
+      allow create: if isValidId(postId) &&
+                       isSignedIn() &&
+                       incoming().userId == request.auth.uid &&
+                       incoming().status == 'PUBLISHED' &&
+                       incoming().replyCount == 0 &&
+                       incoming().keys().hasAll([
+                         'userId', 'authorAlias', 'groupTitle', 'title', 'body', 'status', 'replyCount', 'createdAt', 'updatedAt'
+                       ]) &&
+                       incoming().keys().hasOnly([
+                         'userId', 'authorAlias', 'groupTitle', 'title', 'body', 'status', 'replyCount', 'createdAt', 'updatedAt'
+                       ]) &&
+                       isValidCommunityPost(incoming());
+
+      allow update: if isValidId(postId) && isSignedIn() && isValidCommunityPost(incoming()) &&
+                       incoming().userId == existing().userId &&
+                       incoming().createdAt == existing().createdAt && (
+                         isAdmin() ||
+                         (
+                           existing().userId == request.auth.uid &&
+                           existing().status == 'PUBLISHED' &&
+                           incoming().status == 'PUBLISHED' &&
+                           incoming().diff(existing()).affectedKeys().hasOnly([
+                             'title', 'body', 'groupTitle', 'updatedAt'
+                           ])
+                         ) ||
+                         (
+                           existing().status == 'PUBLISHED' &&
+                           incoming().status == 'PUBLISHED' &&
+                           incoming().replyCount == existing().replyCount + 1 &&
+                           incoming().diff(existing()).affectedKeys().hasOnly(['replyCount', 'updatedAt'])
+                         )
+                       );
+
+      allow delete: if isValidId(postId) && isSignedIn() && (
+        existing().userId == request.auth.uid || isAdmin()
+      );
+
+      match /replies/{replyId} {
+        allow get: if isValidId(replyId) && isSignedIn() && (
+          existing().status == 'PUBLISHED' ||
+          existing().userId == request.auth.uid ||
+          isAdmin()
+        );
+        allow list: if isSignedIn() && (
+          resource.data.status == 'PUBLISHED' ||
+          resource.data.userId == request.auth.uid ||
+          isAdmin()
+        );
+
+        allow create: if isValidId(replyId) &&
+                         isSignedIn() &&
+                         incoming().userId == request.auth.uid &&
+                         incoming().status == 'PUBLISHED' &&
+                         incoming().keys().hasAll(['userId', 'authorAlias', 'body', 'status', 'createdAt']) &&
+                         incoming().keys().hasOnly(['userId', 'authorAlias', 'body', 'status', 'createdAt']) &&
+                         isValidCommunityReply(incoming());
+
+        allow update: if isValidId(replyId) && isAdmin() &&
+                         isValidCommunityReply(incoming()) &&
+                         incoming().userId == existing().userId &&
+                         incoming().createdAt == existing().createdAt;
+
+        allow delete: if isValidId(replyId) && isSignedIn() && (
+          existing().userId == request.auth.uid || isAdmin()
+        );
+      }
+    }
+
+    // --- MODERATION REPORTS ---
+    match /reports/{reportId} {
+      allow get: if isValidId(reportId) && isSignedIn() && (
+        existing().reporterId == request.auth.uid || isAdmin()
+      );
+      allow list: if isSignedIn() && (
+        resource.data.reporterId == request.auth.uid || isAdmin()
+      );
+
+      allow create: if isValidId(reportId) &&
+                       isSignedIn() &&
+                       incoming().reporterId == request.auth.uid &&
+                       incoming().status == 'OPEN' &&
+                       incoming().keys().hasAll(['reporterId', 'targetType', 'targetId', 'reason', 'status', 'createdAt']) &&
+                       incoming().keys().hasOnly(['reporterId', 'targetType', 'targetId', 'reason', 'status', 'createdAt']) &&
+                       isValidModerationReport(incoming());
+
+      allow update: if isValidId(reportId) && isAdmin() &&
+                       isValidModerationReport(incoming()) &&
+                       incoming().reporterId == existing().reporterId &&
+                       incoming().createdAt == existing().createdAt &&
+                       incoming().diff(existing()).affectedKeys().hasOnly(['status']);
+
+      allow delete: if false;
+    }
+  }
+}

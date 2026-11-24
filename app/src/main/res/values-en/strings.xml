@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">Hijrah Netwerk</string>
+    <string name="app_slogan">A network for emigrants, from orientation to integration.</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_discover">Discover</string>
+    <string name="nav_navigation">Navigation</string>
+    <string name="nav_community">Community</string>
+    <string name="nav_profile">Profile</string>
+    <string name="auth_cta_google">Continue with Google</string>
+    <string name="auth_privacy_note">Safe and private space for sisters and families. Personal details stay private.</string>
+    <string name="cd_search">Search Hijrah Netwerk</string>
+    <string name="cd_notifications">View notifications</string>
+    <string name="cd_bookmark">Save to favorites</string>
+</resources>

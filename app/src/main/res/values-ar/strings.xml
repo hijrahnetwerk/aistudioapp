@@ -1,0 +1,14 @@
+<resources>
+    <string name="app_name">شبكة الهجرة</string>
+    <string name="app_slogan">شبكة للمهاجرين، من التوجيه إلى الاندماج.</string>
+    <string name="nav_home">الرئيسية</string>
+    <string name="nav_discover">استكشاف</string>
+    <string name="nav_navigation">الدليل</string>
+    <string name="nav_community">المجتمع</string>
+    <string name="nav_profile">الملف الشخصي</string>
+    <string name="auth_cta_google">المتابعة باستخدام Google</string>
+    <string name="auth_privacy_note">بيئة آمنة وخاصة للأخوات والعائلات. تبقى بياناتك الشخصية سرية.</string>
+    <string name="cd_search">البحث في شبكة الهجرة</string>
+    <string name="cd_notifications">عرض الإشعارات</string>
+    <string name="cd_bookmark">حفظ في المفضلة</string>
+</resources>
